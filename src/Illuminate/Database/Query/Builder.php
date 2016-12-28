@@ -334,13 +334,23 @@ class Builder
      * @param  bool    $where
      * @return $this
      */
-    public function join($table, $one, $operator = null, $two = null, $type = 'inner', $where = false)
+    public function join($table, $one = null, $operator = null, $two = null, $type = 'inner', $where = false)
     {
+        $join = new JoinClause($type, $table);
+
+        // the $one parameter is not provided, skip the binding conditions
+        if (is_null($one)) {
+
+            // add created join
+            $this->joins[] = $join;
+
+            return $this;
+        }
+
         // If the first "column" of the join is really a Closure instance the developer
         // is trying to build a join with a complex "on" clause containing more than
         // one condition, so we'll add the join and call a Closure with the query.
         if ($one instanceof Closure) {
-            $join = new JoinClause($type, $table);
 
             call_user_func($one, $join);
 
@@ -353,7 +363,6 @@ class Builder
         // "on" clause with a single condition. So we will just build the join with
         // this simple join clauses attached to it. There is not a join callback.
         else {
-            $join = new JoinClause($type, $table);
 
             $this->joins[] = $join->on(
                 $one, $operator, $two, 'and', $where
@@ -389,7 +398,7 @@ class Builder
      * @param  string  $second
      * @return \Illuminate\Database\Query\Builder|static
      */
-    public function leftJoin($table, $first, $operator = null, $second = null)
+    public function leftJoin($table, $first = null, $operator = null, $second = null)
     {
         return $this->join($table, $first, $operator, $second, 'left');
     }
@@ -417,7 +426,7 @@ class Builder
      * @param  string  $second
      * @return \Illuminate\Database\Query\Builder|static
      */
-    public function rightJoin($table, $first, $operator = null, $second = null)
+    public function rightJoin($table, $first = null, $operator = null, $second = null)
     {
         return $this->join($table, $first, $operator, $second, 'right');
     }
@@ -447,13 +456,8 @@ class Builder
      */
     public function crossJoin($table, $first = null, $operator = null, $second = null)
     {
-        if ($first) {
-            return $this->join($table, $first, $operator, $second, 'cross');
-        }
-
-        $this->joins[] = new JoinClause('cross', $table);
-
-        return $this;
+        // reuse the join that has optional first argument
+        return $this->join($table, $first, $operator, $second, 'cross');
     }
 
     /**
